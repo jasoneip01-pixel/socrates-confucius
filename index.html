@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>当苏格拉底遇上孔子</title>
+<style>
+/* ═══════════════════════════════════════════════════════
+   苏格拉底 × 孔子
+   两个从未谋面的人，被 AI 从时光中唤回。
+   不是为了分出胜负——是为了让各自的盲区暴露给对方。
+   ═══════════════════════════════════════════════════════ */
+:root {
+  /* Warm foundation — old library, candlelight */
+  --bg:        #151210;
+  --page:      #1d1a16;
+  --page-warm: #211c17;
+  --text:      #c4bbb0;
+  --text-dim:  #8a8278;
+  --divider:   rgba(180,160,130,0.08);
+
+  /* Confucius — earth, gold, cinnabar */
+  --cf-gold:    #c9a054;
+  --cf-gold-pale: #9a8048;
+  --cf-red:     #8a3018;
+  --cf-bg:      rgba(160,110,40,0.05);
+  --cf-border:  rgba(180,140,70,0.12);
+  --cf-accent:  rgba(200,160,80,0.22);
+
+  /* Socrates — sky, marble, deep water */
+  --soc-blue:   #5a8ea8;
+  --soc-blue-pale: #7aa8bc;
+  --soc-bg:     rgba(70,120,150,0.05);
+  --soc-border: rgba(100,150,170,0.12);
+  --soc-accent: rgba(100,155,175,0.22);
+
+  /* States */
+  --anno-color: #a09888;
+  --anno-bg:    rgba(180,160,130,0.03);
+  --stage-color: #706858;
+}
+
+*{margin:0;padding:0;box-sizing:border-box}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans SC","PingFang SC",sans-serif;
+  overflow: hidden; height: 100dvh; width: 100vw;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none; -webkit-user-select: none;
+  touch-action: pan-x;
+}
+
+/* ═══ BOOK AMBIENCE ═══ */
+.book {
+  position: relative; width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  perspective: 2400px;
+  background:
+    radial-gradient(ellipse at 35% 40%, rgba(200,160,80,0.025) 0%, transparent 55%),
+    radial-gradient(ellipse at 65% 55%, rgba(90,140,170,0.025) 0%, transparent 55%);
+}
+
+/* ═══ PAGE STACK ═══ */
+.page-stack {
+  position: absolute;
+  width: min(94vw, 820px); height: min(95dvh, 700px);
+  border-radius: 3px 14px 14px 3px; pointer-events: none;
+}
+.page-stack.s1 {
+  transform: rotateY(-1.2deg) translateX(3px);
+  background: rgba(28,24,18,0.5);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.4);
+  z-index: 1;
+}
+.page-stack.s2 {
+  transform: rotateY(-2.5deg) translateX(7px);
+  background: rgba(25,21,16,0.3);
+  box-shadow: 0 1px 6px rgba(0,0,0,0.3);
+  z-index: 0;
+}
+
+/* ═══ PAGE ═══ */
+.page {
+  position: absolute;
+  width: min(94vw, 820px); height: min(95dvh, 700px);
+  background: var(--page);
+  border-radius: 3px 14px 14px 3px;
+  overflow: hidden;
+  transform-origin: left center;
+  transition: transform 0.65s cubic-bezier(0.33, 0.08, 0.12, 0.96);
+  will-change: transform;
+  display: flex; flex-direction: column;
+  z-index: 2;
+  box-shadow:
+    0 8px 50px rgba(0,0,0,0.6),
+    inset -8px 0 30px -15px rgba(0,0,0,0.5),
+    0 0 0 1px rgba(180,160,130,0.03);
+  /* subtle paper grain via repeating noise-like gradient */
+  background-image:
+    repeating-linear-gradient(
+      0deg, transparent, transparent 2px,
+      rgba(180,160,130,0.008) 2px, rgba(180,160,130,0.008) 3px
+    );
+  background-color: var(--page);
+}
+.page::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(90deg,
+    rgba(0,0,0,0.18) 0%, transparent 3%,
+    transparent 97%, rgba(0,0,0,0.06) 100%);
+  pointer-events: none; z-index: 10; border-radius: inherit;
+}
+.page::after {
+  content: ''; position: absolute; left: -1px; top: 15%; bottom: 15%; width: 1px;
+  background: linear-gradient(180deg, transparent,
+    rgba(200,160,80,0.12) 35%, rgba(200,160,80,0.12) 65%, transparent);
+  pointer-events: none; z-index: 10;
+}
+.page.flipped  { transform: rotateY(-168deg); opacity: 0; pointer-events: none; }
+.page.ahead    { transform: rotateY(1.5deg) translateX(3px); opacity: 0.2; pointer-events: none; }
+.page.current  { transform: rotateY(0); opacity: 1; z-index: 5; }
+
+/* ═══ COVER ═══ */
+.page-cover {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; padding: 3rem 2rem; gap: 1.6rem;
+  background: var(--page-warm);
+}
+.cover-rule {
+  width: 60px; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(200,160,80,0.3), transparent);
+}
+.cover-rule.wide { width: 100px; }
+.cover-h1 {
+  font-family: 'Noto Serif SC', 'STSong', Georgia, serif;
+  font-size: clamp(1.8rem, 5vw, 2.6rem); font-weight: 400;
+  letter-spacing: 0.1em; line-height: 1.35;
+  background: linear-gradient(135deg, var(--cf-gold) 25%, var(--soc-blue) 75%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.cover-sub {
+  font-size: clamp(0.76rem, 1.3vw, 0.86rem); color: #8a8278;
+  font-style: italic; max-width: 400px; line-height: 1.8;
+  font-family: 'Noto Serif SC', Georgia, serif;
+}
+.cover-meta {
+  font-size: 0.6rem; color: #605850; line-height: 2.2; letter-spacing: 0.04em;
+}
+.cover-sigil {
+  font-size: 1.3rem; letter-spacing: 0.4em; color: rgba(200,160,80,0.18);
+  display: flex; gap: 1.2rem;
+}
+
+/* ═══ DEBATE PAGE SHARED ═══ */
+.pg-hd {
+  padding: 0.8rem 1.4rem; border-bottom: 1px solid var(--divider);
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 0.5rem; flex-shrink: 0;
+  background: linear-gradient(180deg, rgba(0,0,0,0.15) 0%, transparent 100%);
+}
+.pg-tag {
+  font-size: 0.58rem; letter-spacing: 0.12em; text-transform: uppercase;
+  padding: 0.15rem 0.55rem; border-radius: 10px; font-weight: 500;
+}
+.pg-tag.d1 { color: var(--cf-gold-pale); border:1px solid rgba(180,140,70,0.2); background:rgba(160,110,40,0.04); }
+.pg-tag.d2 { color: var(--soc-blue-pale); border:1px solid rgba(100,150,170,0.2); background:rgba(70,120,150,0.04); }
+.pg-num { font-size: 0.56rem; color: #504840; letter-spacing: 0.06em; }
+
+/* ── body (varies by page type: normal / climax) ── */
+.pg-body {
+  flex: 1; overflow-y: auto; padding: 1.5rem 1.4rem;
+  display: flex; flex-direction: column; gap: 1rem;
+  -webkit-overflow-scrolling: touch;
+}
+/* climax page — extra breathing room, centered */
+.pg-body.climax {
+  justify-content: center; padding: 2rem 1.8rem;
+  text-align: center; gap: 1.4rem;
+}
+
+/* ── speaker block ── */
+.spk {
+  padding: 1rem 1.1rem; border-radius: 10px;
+}
+.spk.cf {
+  background: var(--cf-bg); border: 1px solid var(--cf-border);
+  border-left: 2px solid var(--cf-accent);
+}
+.spk.soc {
+  background: var(--soc-bg); border: 1px solid var(--soc-border);
+  border-left: 2px solid var(--soc-accent);
+}
+.spk .who {
+  font-size: 0.6rem; letter-spacing: 0.1em; margin-bottom: 0.5rem;
+  font-weight: 600; display: flex; align-items: center; gap: 0.5rem;
+}
+.spk.cf .who { color: var(--cf-gold); font-family: 'Noto Serif SC','STSong',Georgia,serif; }
+.spk.soc .who { color: var(--soc-blue); font-family: Georgia,'Times New Roman',serif; }
+.spk .who .stage {
+  font-size: 0.53rem; color: var(--stage-color); font-weight: 400;
+  letter-spacing: 0.06em; font-family: -apple-system,sans-serif;
+}
+.spk .quote {
+  font-size: clamp(0.82rem, 1.5vw, 0.93rem); line-height: 1.85;
+  font-family: 'Noto Serif SC','STSong',Georgia,serif;
+}
+.spk .quote em {
+  font-style: normal; font-weight: 600; letter-spacing: 0.02em;
+}
+.spk.cf .quote em { color: var(--cf-gold); }
+.spk.soc .quote em { color: var(--soc-blue-pale); }
+
+/* climax speaker — larger, centered */
+.spk.climax-spk { padding: 1.4rem 1.6rem; text-align: center; }
+.spk.climax-spk .quote {
+  font-size: clamp(0.95rem, 2vw, 1.15rem); line-height: 1.9;
+}
+.spk.climax-spk .who { justify-content: center; font-size: 0.65rem; }
+
+/* ── annotation ── */
+.pg-anno {
+  margin-top: 0.2rem; padding: 0.75rem 0.9rem;
+  background: var(--anno-bg); border-radius: 8px;
+  border-left: 2px solid var(--cf-accent);
+  font-size: clamp(0.65rem, 1vw, 0.73rem); color: var(--anno-color);
+  line-height: 1.6; font-style: italic; flex-shrink: 0;
+}
+
+/* ── footer ── */
+.pg-ft {
+  padding: 0.6rem 1.4rem; border-top: 1px solid var(--divider);
+  font-size: 0.56rem; color: #504840; display: flex; align-items: center;
+  justify-content: space-between; flex-shrink: 0; letter-spacing: 0.04em;
+}
+.pg-ft .ft-cf { color: rgba(200,160,80,0.28); }
+.pg-ft .ft-soc { color: rgba(90,140,170,0.28); }
+.pg-ft .ft-hint { color: #504840; font-style: italic; }
+
+/* ═══ INTERMISSION ═══ */
+.page-inter {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; gap: 1.8rem; padding: 3rem 2rem;
+  background: radial-gradient(ellipse at 50% 50%, rgba(90,140,170,0.05) 0%, transparent 60%), var(--page);
+}
+.inter-sigil {
+  font-size: 1rem; letter-spacing: 0.3em; color: rgba(90,140,170,0.2);
+}
+.inter-title {
+  font-family: 'Noto Serif SC','STSong',Georgia,serif;
+  font-size: clamp(1.3rem, 4vw, 1.7rem); font-weight: 400;
+  background: linear-gradient(135deg, var(--soc-blue-pale), var(--cf-gold-pale));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.inter-sub { font-size: 0.78rem; color: #706858; font-style: italic; max-width: 360px; line-height: 1.7; }
+
+/* ═══ SYNTHESIS ═══ */
+.syn-page {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 2.5rem 2rem; text-align: center; gap: 1.6rem;
+  background: var(--page-warm);
+}
+.syn-title {
+  font-family: 'Noto Serif SC','STSong',Georgia,serif;
+  font-size: clamp(1.2rem, 3.5vw, 1.6rem); font-weight: 400;
+  background: linear-gradient(90deg, var(--cf-gold), var(--soc-blue));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.syn-chars { display: flex; gap: clamp(2.5rem, 7vw, 5rem); align-items: center; }
+.syn-ch { text-align: center; }
+.syn-ch .c {
+  font-size: clamp(3.5rem, 11vw, 5.5rem); display: block; line-height: 1;
+  font-family: 'Noto Serif SC','STSong',Georgia,serif; font-weight: 300;
+}
+.syn-ch .l { font-size: 0.62rem; color: #706858; margin-top: 0.5rem; line-height: 1.5; }
+.syn-arr { font-size: 1.6rem; color: #403830; font-weight: 300; }
+.syn-txt {
+  font-size: clamp(0.74rem, 1.3vw, 0.84rem); color: #908878;
+  line-height: 1.8; max-width: 460px;
+}
+.syn-closing {
+  font-size: 0.68rem; color: #605850; font-family: 'Noto Serif SC',Georgia,serif;
+  font-style: italic; letter-spacing: 0.06em;
+}
+.syn-rule {
+  width: 80px; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(200,160,80,0.25), transparent);
+}
+
+/* ═══ DOTS ═══ */
+.page-dots {
+  position: fixed; top: clamp(0.6rem, 2vh, 0.9rem);
+  left: 50%; transform: translateX(-50%);
+  display: flex; gap: 0.25rem; z-index: 20; flex-wrap: wrap;
+  justify-content: center; max-width: 88vw;
+}
+.page-dot {
+  width: 4px; height: 4px; border-radius: 50%;
+  background: rgba(180,160,130,0.08);
+  transition: all 0.5s;
+}
+.page-dot.d1.active { background: var(--cf-gold); width: 16px; border-radius: 2px; box-shadow: 0 0 8px rgba(200,160,80,0.35); }
+.page-dot.d2.active { background: var(--soc-blue); width: 16px; border-radius: 2px; box-shadow: 0 0 8px rgba(90,140,170,0.35); }
+.page-dot.cover.active { background: #706858; width: 16px; border-radius: 2px; }
+
+/* ═══ SWIPE ZONES ═══ */
+.swipe-zone { position: fixed; top: 0; bottom: 0; width: 30%; z-index: 1; }
+.swipe-zone.left { left: 0; }
+.swipe-zone.right { right: 0; }
+
+/* ═══ MOBILE ═══ */
+@media (max-width: 480px) {
+  .page { width: 97vw; height: 92dvh; border-radius: 3px 10px 10px 3px; }
+  .page-stack { width: 97vw; height: 92dvh; display: none; }
+  .pg-body { gap: 0.7rem; padding: 1rem 0.7rem; }
+  .pg-body.climax { padding: 1.2rem 0.9rem; gap: 1rem; }
+  .spk { padding: 0.7rem 0.75rem; }
+  .spk.climax-spk { padding: 1rem 1rem; }
+  .spk.climax-spk .quote { font-size: 0.85rem; line-height: 1.8; }
+  .spk .quote { font-size: 0.76rem; line-height: 1.65; }
+  .spk .who { font-size: 0.56rem; }
+  .pg-anno { font-size: 0.63rem; padding: 0.55rem 0.6rem; line-height: 1.5; }
+  .pg-hd { padding: 0.55rem 0.75rem; }
+  .pg-ft { padding: 0.45rem 0.75rem; font-size: 0.52rem; }
+  .page-cover { padding: 2.5rem 1.4rem; gap: 1.2rem; }
+  .cover-h1 { font-size: clamp(1.3rem, 6vw, 1.8rem); }
+  .syn-ch .c { font-size: clamp(2.5rem, 13vw, 4.5rem); }
+  .page-inter { padding: 2.5rem 1.5rem; gap: 1.4rem; }
+}
+@media (max-width: 359px) {
+  .page { width: 99vw; height: 93dvh; }
+  .spk .quote { font-size: 0.68rem; }
+  .pg-anno { font-size: 0.6rem; padding: 0.4rem 0.45rem; }
+}
+
+/* scrollbar */
+.pg-body::-webkit-scrollbar { width: 3px; }
+.pg-body::-webkit-scrollbar-track { background: transparent; }
+.pg-body::-webkit-scrollbar-thumb { background: rgba(180,160,130,0.08); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<div class="book" id="book">
+  <div class="page-stack s1"></div>
+  <div class="page-stack s2"></div>
+</div>
+<div class="page-dots" id="dots"></div>
+<div class="swipe-zone left" id="szL"></div>
+<div class="swipe-zone right" id="szR"></div>
+
+<script>
+/* ═══ CONTENT ═══
+   climax: true marks dramatic turning-point pages for special layout */
+const pages = [
+  /* 0 */ { cover:true, title:'苏格拉底\n遇上孔子',
+    sub:'两个从未谋面的人，被 AI 从时光中唤回。\n不是为了分出胜负——\n是为了让各自的盲区暴露给对方。',
+    meta:'CCTV《2024 中国 · AI 盛典》· 百家争鸣\nyt-dlp → ffmpeg → miaoda-studio-cli STT\nAriste 制作 · 2026' },
+  /* 1 */ { debate:1, num:1, s1:{ who:'苏格拉底', stage:'开场', side:'soc', q:'教育的第一要务从来不是灌输知识。<em>先生要教人往何处去？</em>' },
+    s2:{ who:'孔子', stage:'回应', side:'cf', q:'教人怀疑——<em>怀疑你看到的，怀疑别人告诉你的。</em>不打碎现成的答案，人永远找不到真正的智慧。' },
+    anno:'💡 产婆术：苏格拉底认为教师的任务不是灌输，而是帮学生「生出」已有的知识。孔子出人意料地先承认了怀疑的价值——但前提是"先立根本"。' },
+  /* 2 */ { debate:1, num:2, s1:{ who:'苏格拉底', stage:'追击', side:'soc', q:'先贤趟过苦难留下的答案，<em>难道就不配称为智慧？</em>' },
+    s2:{ who:'孔子', stage:'坚守', side:'cf', q:'怀疑一切便无敬畏，人无敬畏便无底线。<em>能被几句提问击碎的东西，本就不值得坚守。</em>' },
+    anno:'💡 传统 vs 理性：孔子用了苏格拉底式的论证来捍卫传统——"能被击碎的，本就不值得坚守"——这正是启蒙运动的逻辑起点。' },
+  /* 3 */ { debate:1, num:3, s1:{ who:'苏格拉底', stage:'追问', side:'soc', q:'先生推崇周礼，教弟子忠孝，他们便去忠孝。<em>可他们自己问过为什么吗？</em>' },
+    s2:{ who:'孔子', stage:'反驳', side:'cf', q:'忠孝从来不是死规矩，<em>真正的伦理发自本能。</em>一个人若连为什么要爱父母都要去追问，便早已丧失了最基本的人心。' },
+    anno:'💡 盲从指控 vs 现象学直觉：苏格拉底直击最脆弱的点——康德会说那是合乎义务而非出于义务。孔子回应：恻隐之心先于理性反思（孟子四端说）。' },
+  /* 4 */ { debate:1, num:4, s1:{ who:'苏格拉底', stage:'', side:'soc', q:'教育并非复制千篇一律的君子，而是用不断的盘问去<em>唤醒灵魂</em>，让人自己真正明白为何去爱。' },
+    s2:{ who:'孔子', stage:'反击', side:'cf', q:'爱在行，不在问。你是让一个孩子还没学会走路，<em>就去质疑为什么要走路？</em>' },
+    anno:'💡 两种范式：复制（灌输答案）vs 唤醒（自我发现）。孔子用时序论证反驳：先"立"再"破"——与皮亚杰认知发展阶段论暗合。' },
+  /* 5 */ { debate:1, num:5, s1:{ who:'苏格拉底', stage:'', side:'soc', q:'如果学生们只会闭着眼睛去效仿先贤，<em>那他们不过是活成了别人的影子。</em>' },
+    s2:{ who:'孔子', stage:'务实', side:'cf', q:'若其资质平庸，找不到答案，只会陷入迷惘。<em>那爬不起来的平庸者呢？</em>难道便任由其跌碎在迷惘里？' },
+    anno:'💡 存在主义 vs 教育公平：萨特说"他人即地狱"，但孔子追问——苏格拉底的猛药真的适合所有人吗？不是每个人都有能力从无底盘问中爬出来。' },
+  /* 6 */ { debate:1, num:6, s1:{ who:'苏格拉底', stage:'回应', side:'soc', q:'我在雅典街头，不论贵族还是鞋匠，<em>皆一视同仁的盘问。</em>真理面前没有高低贵贱。' },
+    s2:{ who:'孔子', stage:'拆招', side:'cf', q:'错就错在这一视同仁。<em>你用同一副猛药去治所有人</em>，智者或可顿悟，愚者却只会在无尽的盘问中信念崩塌。' },
+    anno:'💡 平等理性 vs 因材施教：苏格拉底让奴隶孩子推导几何定理来证明人人有理性。孔子坚持差异化——两千五百年后教育体系仍在两者间摇摆。' },
+  /* 7 */ { debate:1, num:7, s1:{ who:'苏格拉底', stage:'', side:'soc', q:'我教他永远追问——<em>这苍生真的在受苦吗？还是世俗告诉他们，他们在受苦？</em>' },
+    s2:{ who:'孔子', stage:'釜底抽薪', side:'cf', q:'若人人皆在山顶追问苦难的真伪，<em>井边的孺子，倒地的老者，谁去救？</em>' },
+    anno:'💡 二阶反思 vs 行动困局：哲学追问"苍生真的需要帮吗"，孔子用"孺子入井"把哲学拉回道德直觉——纯粹反思导致行动瘫痪，此质问近乎无解。' },
+  /* 8 — CLIMAX 1 */ { debate:1, num:8, climax:true, s1:{ who:'孔子', stage:'追问', side:'cf', q:'你的追问不留答案，你的学生问了一辈子。<em>问到最后，得到了什么？</em>' },
+    s2:{ who:'苏格拉底', stage:'终答', side:'soc', q:'<em>知道自己一无所知。</em>' },
+    anno:'💡 最尖锐的质问：哲学之旅是否一场徒劳？苏格拉底的回答恰恰是整个西方哲学传统的起点——承认无知，才是智慧的开端。苏格拉底悖论至今未解。' },
+  /* 9 — CLIMAX 2 */ { debate:1, num:9, climax:true, s1:{ who:'孔子', stage:'终极', side:'cf', q:'<em>知其不可而为之。</em>' },
+    s2:{ who:'苏格拉底', stage:'', side:'soc', q:'你我终究不同，我追求的是<em>知其无知而求知。</em>' },
+    anno:'💡 两种终极姿态：一个在行动上坚持到极点，一个在知识上谦卑到极点。向内求"知无知"，向外走"不可为"——构成了人类精神的完整坐标。' },
+  /* 10 */ { inter:true, title:'第二场', sub:'知其不可之后——两种姿态各自留下了什么？' },
+  /* 11 */ { debate:2, num:1, s1:{ who:'苏格拉底', stage:'追问', side:'soc', q:'你说的"仁"究竟是什么？<em>如果一个人不能定义它，他怎么能说自己拥有它？</em>' },
+    s2:{ who:'孔子', stage:'微笑', side:'cf', q:'"仁"<em>不是用来定义的，是用来做的。</em>己欲立而立人，己欲达而达人。' },
+    anno:'💡 定义 vs 践行：《美诺篇》要求先定义"德性"再讨论。孔子拒绝——定义会把活德性变死概念。与维特根斯坦"意义在用法中"有深刻共鸣。' },
+  /* 12 */ { debate:2, num:2, s1:{ who:'苏格拉底', stage:'追击', side:'soc', q:'扶起孩子是出于"仁"，还是社会期待？<em>如果他的内心并不情愿，但礼法要求他这样做</em>——仍然是"仁"吗？' },
+    s2:{ who:'孔子', stage:'拆解', side:'cf', q:'你的二分法是假的。仁<em>同时是内心的诚意和外在的规范</em>，缺一不可。人而不仁，如礼何？' },
+    anno:'💡 康德式追问到公元前 5 世纪：合乎道德的行为，动机不纯，还道德吗？孔子拒绝内心/外在二分——"内圣外王"，内外统一才是仁。' },
+  /* 13 */ { debate:2, num:3, s1:{ who:'苏格拉底', stage:'递进', side:'soc', q:'你的"礼"规定了臣子服从君主——<em>如果君主是暴君呢？</em>' },
+    s2:{ who:'孔子', stage:'正色', side:'cf', q:'邦无道，富且贵焉，耻也。当道不行，<em>"道不行，乘桴浮于海"</em>——离开。' },
+    anno:'💡 权威与正义：从安提戈涅到梭罗的永恒问题。孔子的答案——不服从，不以暴易暴，退而修书、教人、等待时机。对"以暴易暴"循环有清醒认知。' },
+  /* 14 */ { debate:2, num:4, s1:{ who:'苏格拉底', stage:'直面', side:'soc', q:'你选择退出，我选择留下质问。<em>两种抵抗，两种命运。</em>' },
+    s2:{ who:'孔子', stage:'洞见', side:'cf', q:'你没有摧毁雅典。你的问题——"什么是正义""未经审视的人生不值得过"——<em>这些问题本身就成为了雅典最珍贵的遗产。</em>' },
+    anno:'💡 自反性时刻：苏格拉底承认方法有毁灭性。孔子用"遗产"的语言来肯定他——提问本身可以是文明的光荣，不必非得有答案。' },
+  /* 15 */ { debate:2, num:5, s1:{ who:'苏格拉底', stage:'领悟', side:'soc', q:'所以<em>"礼"和"追问"，殊途同归？</em>' },
+    s2:{ who:'孔子', stage:'终和', side:'cf', q:'君子和而不同，小人同而不和。<em>我们不同——但这恰恰让我们共处。</em>' },
+    anno:'💡 最高成就：不再追求"谁对"，而是意识到"不同"是文明健康的必要条件。一个建框架，一个搭梯子——缺了谁文明都不完整。' },
+  /* 16 */ { debate:2, num:6, s1:{ who:'孔子', stage:'沉思', side:'cf', q:'我教人如何在<em>给定的世界</em>里成为好人。你教人如何<em>质问给定的世界</em>。两者都必要。' },
+    s2:{ who:'苏格拉底', stage:'', side:'soc', q:'我们把思考的方法留给了后人。只不过你留的是"怎么做人"，<em>我留的是"怎么提问"。</em>' },
+    anno:'💡 最伟大的跨文化理解时刻：孔子承认两者的必要性。不是在辩论中分出胜负，而是在辩论中看到对方的必要性。2500 年后读到，仍然动容。' },
+  /* 17 */ { synthesis:true },
+];
+
+const total = pages.length;
+let current = 0;
+const book = document.getElementById('book');
+const dotsContainer = document.getElementById('dots');
+
+function sigil(kind) {
+  if (kind==='cover') return '<span class="cover-sigil"><span>📜</span><span>·</span><span>🏛️</span></span>';
+  if (kind==='inter') return '<div class="inter-sigil">◆ &nbsp; ◆ &nbsp; ◆</div>';
+  return '';
+}
+function speakerIcon(side) {
+  return side==='cf'? '📜' : '🏛️';
+}
+
+pages.forEach((pg,i)=>{
+  const dot = document.createElement('div');
+  const dc = pg.cover||pg.synthesis||pg.inter?' cover':(pg.debate===1?' d1':' d2');
+  dot.className = 'page-dot'+(i===0?' active':'')+dc;
+  dotsContainer.appendChild(dot);
+
+  const el = document.createElement('div');
+  el.className = 'page'+(i===0?' current':' ahead');
+  el.id = 'page'+i;
+
+  if(pg.cover){
+    el.classList.add('page-cover');
+    el.innerHTML = sigil('cover') +
+      `<h2 class="cover-h1">${pg.title.replace(/\n/g,'<br>')}</h2>` +
+      `<div class="cover-rule wide"></div>` +
+      `<p class="cover-sub">${pg.sub.replace(/\n/g,'<br>')}</p>` +
+      `<div class="cover-rule"></div>` +
+      `<div class="cover-meta">${pg.meta.replace(/\n/g,'<br>')}</div>`;
+  } else if(pg.inter){
+    el.classList.add('page-inter');
+    el.innerHTML = sigil('inter') +
+      `<div class="inter-title">${pg.title}</div>` +
+      `<div class="inter-sub">${pg.sub}</div>`;
+  } else if(pg.synthesis){
+    el.classList.add('syn-page');
+    el.innerHTML = `<div class="syn-title">織 與 破</div>` +
+      `<div class="syn-rule"></div>` +
+      `<div class="syn-chars">` +
+        `<div class="syn-ch"><span class="c" style="color:var(--cf-gold)">織</span><div class="l">孔子<br>建框架 · 让人群聚在一起</div></div>` +
+        `<span class="syn-arr">⟷</span>` +
+        `<div class="syn-ch"><span class="c" style="color:var(--soc-blue)">破</span><div class="l">苏格拉底<br>搭梯子 · 让人逃出框架</div></div>` +
+      `</div>` +
+      `<div class="syn-rule"></div>` +
+      `<p class="syn-txt">织得太密，就成了网——网里的人出不去。<br>破得太多，就散落各处——不成文明。<br><br><em>织和破的轮回，才是文明的呼吸。</em><br>继任者要做的，是在织和破之间<br>决定这一代该偏向哪边。</p>` +
+      `<div class="syn-closing">« 君子和而不同 »</div>`;
+  } else {
+    const dtag = pg.debate===1?'第一场 · 教育':'第二场 · 知其不可之后';
+    const dc = pg.debate===1?'d1':'d2';
+    const bodyCls = pg.climax ? 'pg-body climax' : 'pg-body';
+    const spkCls = pg.climax ? 'spk climax-spk' : 'spk';
+    const icon1 = speakerIcon(pg.s1.side);
+    const icon2 = speakerIcon(pg.s2.side);
+    el.innerHTML =
+      `<div class="pg-hd"><span class="pg-tag ${dc}">${dtag}</span><span class="pg-num">${pg.num}/${pages.filter(p=>p.debate===pg.debate).length}</span></div>` +
+      `<div class="${bodyCls}">` +
+        `<div class="${spkCls} ${pg.s1.side}"><div class="who">${icon1} ${pg.s1.who}<span class="stage"> · ${pg.s1.stage}</span></div><div class="quote">${pg.s1.q}</div></div>` +
+        `<div class="${spkCls} ${pg.s2.side}"><div class="who">${icon2} ${pg.s2.who}<span class="stage"> · ${pg.s2.stage}</span></div><div class="quote">${pg.s2.q}</div></div>` +
+        `<div class="pg-anno">${pg.anno}</div>` +
+      `</div>` +
+      `<div class="pg-ft"><span class="ft-cf">📜 孔子 · 前 551–479</span><span class="ft-hint">←  翻页  →</span><span class="ft-soc">🏛️ 苏格拉底 · 前 470–399</span></div>`;
+  }
+  book.appendChild(el);
+});
+
+function render(){
+  document.querySelectorAll('.page').forEach((p,i)=>{
+    p.classList.remove('current','flipped','ahead');
+    if(i<current) p.classList.add('flipped');
+    else if(i===current) p.classList.add('current');
+    else p.classList.add('ahead');
+  });
+  document.querySelectorAll('.page-dot').forEach((d,i)=>d.classList.toggle('active',i===current));
+}
+function flip(dir){
+  const n=current+dir;
+  if(n<0||n>=total) return;
+  current=n; render();
+}
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowLeft'||e.key==='ArrowUp') flip(-1);
+  if(e.key==='ArrowRight'||e.key==='ArrowDown'||e.key===' ') { e.preventDefault(); flip(1); }
+});
+let tx=0,ty=0;
+document.addEventListener('touchstart',e=>{ tx=e.touches[0].clientX; ty=e.touches[0].clientY; },{passive:true});
+document.addEventListener('touchend',e=>{
+  const dx=e.changedTouches[0].clientX-tx, dy=e.changedTouches[0].clientY-ty;
+  if(Math.abs(dx)>Math.abs(dy)&&Math.abs(dx)>40) flip(dx<0?1:-1);
+});
+document.getElementById('szL').addEventListener('click',()=>flip(-1));
+document.getElementById('szR').addEventListener('click',()=>flip(1));
+render();
+</script>
+</body>
+</html>
